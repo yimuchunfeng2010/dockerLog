@@ -1,0 +1,12 @@
+/.idea
+.DS_Store
+.build
+.vimprojects
+swagger.yml
+swagger.json
+*.log
+logs/*
+*.swp
+nohup.out
+main
+main.exe
