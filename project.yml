@@ -1,0 +1,5 @@
+name: docker-log
+version: 1.0.1
+description: docker 日志
+program_language: golang
+
