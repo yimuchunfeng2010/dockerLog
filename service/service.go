@@ -5,17 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/config"
+	"DockerLog/config"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 	"encoding/json"
-	"log/global"
-
+	"DockerLog/global"
 )
-
 
 func LogMain() {
 	serviceName := GetServiceNameFromUser()
@@ -104,17 +102,17 @@ func GetServiceID(serviceName string) (serviceID string, err error) {
 	return "", errors.New(fmt.Sprintf("Service Not Found[ServiceName:%s]", serviceName))
 }
 
-func GetServiceIDFromCache(serviceName string)(serviceID string, err error){
-	for name, id := range global.GlobalVar.ServiceNameID{
-		if 0 == strings.Compare(name, serviceName){
-			return id,nil
+func GetServiceIDFromCache(serviceName string) (serviceID string, err error) {
+	for name, id := range global.GlobalVar.ServiceNameID {
+		if 0 == strings.Compare(name, serviceName) {
+			return id, nil
 		}
 	}
-	return "",errors.New("Service Not Found")
+	return "", errors.New("Service Not Found")
 }
 
 func GetLogsByID(serviceID string) (err error) {
-	arg := fmt.Sprintf("rancher logs -f %s > %s 2>&1",  serviceID,global.LogFile.TmpLogFile)
+	arg := fmt.Sprintf("rancher logs -f %s > %s 2>&1", serviceID, global.LogFile.TmpLogFile)
 	_, err = execShellCmd(arg)
 	if err != nil {
 		if 0 == strings.Compare(global.ErrVar.SysErr, err.Error()) {
@@ -136,7 +134,7 @@ func ProcLog(chLog chan map[string]string, chInternal chan string) {
 
 	fi, err := os.Open(global.LogFile.TmpLogFile)
 	if err != nil {
-		fmt.Println("Open File Failed[Err:%s]", err.Error())
+		fmt.Printf("Open File Failed[Err:%s]", err.Error())
 		return
 	}
 	defer fi.Close()
@@ -159,8 +157,7 @@ func ProcLog(chLog chan map[string]string, chInternal chan string) {
 			break
 		}
 
-
-		if true == global.GlobalVar.PauseFlag{
+		if true == global.GlobalVar.PauseFlag {
 			time.Sleep(time.Second)
 			goto CmdLoop
 		}
@@ -178,7 +175,7 @@ func ProcLog(chLog chan map[string]string, chInternal chan string) {
 	}
 }
 func execShellCmd(arg string) (output []string, err error) {
-	cmd := exec.Command("/bin/bash","-c",arg)
+	cmd := exec.Command("/bin/bash", "-c", arg)
 	out, err := cmd.Output()
 	if err != nil {
 		return
@@ -243,7 +240,7 @@ func GetServiceNameFromUserNew(chUserInput chan string) string {
 			}
 		}
 		if len(tmpServiceList) != 0 {
-			return ChooseServiceNew(tmpServiceList,chUserInput)
+			return ChooseServiceNew(tmpServiceList, chUserInput)
 		}
 
 		serviceList, err := GetCompleteServiceName(serviceName)
@@ -251,13 +248,13 @@ func GetServiceNameFromUserNew(chUserInput chan string) string {
 			fmt.Printf("Please Enter Right Service Name: ")
 			goto loop
 		}
-		return ChooseServiceNew(serviceList,chUserInput)
+		return ChooseServiceNew(serviceList, chUserInput)
 
 	}
 	return ""
 }
 
-func ChooseServiceNew(serviceList []string,chUserInput chan string) string {
+func ChooseServiceNew(serviceList []string, chUserInput chan string) string {
 	if len(serviceList) == 1 {
 		return serviceList[0]
 	}
@@ -267,8 +264,8 @@ func ChooseServiceNew(serviceList []string,chUserInput chan string) string {
 		for idx, value := range serviceList {
 			fmt.Println(idx, value)
 		}
-		tmp := <- chUserInput
-		serviceIdx ,_ := strconv.Atoi(tmp)
+		tmp := <-chUserInput
+		serviceIdx, _ := strconv.Atoi(tmp)
 		if serviceIdx >= len(serviceList) {
 			fmt.Println("Please Enter Right Idx")
 			goto idxLoop
@@ -287,7 +284,7 @@ func ChooseService(serviceList []string) string {
 
 	idxLoop:
 		for idx, value := range serviceList {
-			fmt.Println(idx,"  ",value)
+			fmt.Println(idx, "  ", value)
 		}
 		fmt.Printf("Which Service Do You Choose: ")
 		var serviceIdx int
@@ -340,13 +337,13 @@ func GetUseInput(chUserInput chan string) {
 func PrintLog(logMsg map[string]string) {
 	// 先判断是否有需要打印的日志
 	isNeedPrint := false
-	for _,field := range config.Config.Fields{
-		if logMsg[field] != ""{
+	for _, field := range config.Config.Fields {
+		if logMsg[field] != "" {
 			isNeedPrint = true
 			break
 		}
 	}
-	if false == isNeedPrint{
+	if false == isNeedPrint {
 		return
 	}
 
@@ -387,10 +384,10 @@ func StopSysProcess(ServiceID string) (err error) {
 
 	var processID int
 	for _, value := range output {
-		if true == strings.Contains(value,"rancher logs -f") && -1 == strings.Index(value,"2>&1"){
+		if true == strings.Contains(value, "rancher logs -f") && -1 == strings.Index(value, "2>&1") {
 			tmpArray := strings.Split(value, " ")
-			for _, vv := range tmpArray{
-				if id , newErr := strconv.Atoi(vv);newErr == nil{
+			for _, vv := range tmpArray {
+				if id, newErr := strconv.Atoi(vv); newErr == nil {
 					processID = id
 					goto loop
 				}
@@ -398,8 +395,8 @@ func StopSysProcess(ServiceID string) (err error) {
 		}
 	}
 
-	loop:
-	if 0 == processID{
+loop:
+	if 0 == processID {
 		return
 	}
 	// 终止进程
@@ -419,19 +416,19 @@ func GetAllService() {
 	cmdString := "rancher ps"
 	output, err := execShellCmd(cmdString)
 	if err != nil {
-		fmt.Println("Exec Shell Cmd Failed! [Err: %s]", err.Error())
+		fmt.Printf("Exec Shell Cmd Failed! [Err: %s]", err.Error())
 		return
 	}
 	global.GlobalVar.ServiceNameID = make(map[string]string)
 	for _, value := range output {
 
-		for _, curServiceName := range config.Config.Sevices{
-			if strings.Contains(value, curServiceName){
+		for _, curServiceName := range config.Config.Sevices {
+			if strings.Contains(value, curServiceName) {
 				tmpValueArrray := strings.Split(value, " ")
-				for _, part := range tmpValueArrray{
-					if strings.Contains(part, curServiceName){
+				for _, part := range tmpValueArrray {
+					if strings.Contains(part, curServiceName) {
 						tmpName := strings.Split(part, "/")
-						global.GlobalVar.ServiceNameID[tmpName[0]]= tmpValueArrray[0]
+						global.GlobalVar.ServiceNameID[tmpName[0]] = tmpValueArrray[0]
 					}
 				}
 			}
@@ -439,16 +436,15 @@ func GetAllService() {
 	}
 }
 
-
-func CleanScreen(){
+func CleanScreen() {
 	msg := ""
-	for i := 0; i < 100; i++{
+	for i := 0; i < 100; i++ {
 		msg += "\n"
 	}
 	fmt.Printf(msg)
 }
 
-func CmdHelp(){
+func CmdHelp() {
 	fmt.Println("Please Enter Right Command")
 	fmt.Println("q   Quit the program")
 	fmt.Println("s   Switch to other service")

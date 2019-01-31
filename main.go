@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log/service"
+	"DockerLog/service"
 )
 
 func init(){
