@@ -7,11 +7,14 @@ var Config = struct {
 	PrintFormat PrintFormat
 
 }{
+	// 日志打印字段
 	Fields: []string{
 		"time",
 		"file",
 		"msg",
 	},
+
+	// 预加载的服务名
 	Sevices:[]string{
 		"service-etrip-approval",
 		"service-etrip-bill",
@@ -25,7 +28,10 @@ var Config = struct {
 		"service-finance-kafka-task",
 		"service-freight-task",
 		"service-freight-approval",
+		"service-finance-supplement-task",
 	},
+
+	// 打印颜色配置
 	PrintColor:PrintColor{
 		FrontColor:40,
 		BackgroudColor:1,

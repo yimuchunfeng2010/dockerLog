@@ -22,6 +22,7 @@ func LogMain() {
 		fmt.Printf("service.GetServiceID Failed[Err:%s]", err.Error())
 		return
 	}
+
 	chLog := make(chan map[string]string)
 	chUserInput := make(chan string)
 	chInternal := make(chan string)
@@ -32,24 +33,29 @@ func LogMain() {
 
 	for {
 		select {
+			// 打印日志
 		case logMsg, _ := <-chLog:
 			PrintLog(logMsg)
+			// 处理用户命令输入
 		case cmd := <-chUserInput:
 			switch cmd {
 			case global.Command.Quit:
 				QuitLog(serviceID)
 				return
+
 			case global.Command.Switch: // 切换分支
 				chInternal <- global.InternalCmd.Stop
 				StopSysProcess(serviceID)
-				serviceName := GetServiceNameFromUserNew(chUserInput)
+				serviceName := GetServiceNameFromChannel(chUserInput)
 				serviceID, err = GetServiceID(serviceName)
 				if err != nil {
 					fmt.Printf("service.GetServiceID Failed[Err:%s]", err.Error())
 					return
 				}
+
 				go GetLogsByID(serviceID)
 				go ProcLog(chLog, chInternal)
+
 			case global.Command.CleanScreen:
 				CleanScreen()
 			case global.Command.PausePrint:
@@ -205,7 +211,7 @@ func GetServiceNameFromUser() string {
 		fmt.Scanf("%s", &serviceName)
 		// 首先在缓存中查询
 		tmpServiceList := make([]string, 0)
-		for name, _ := range global.GlobalVar.ServiceNameID {
+		for name := range global.GlobalVar.ServiceNameID {
 			if true == strings.Contains(name, serviceName) {
 				tmpServiceList = append(tmpServiceList, name)
 			}
@@ -225,7 +231,7 @@ func GetServiceNameFromUser() string {
 	return ""
 }
 
-func GetServiceNameFromUserNew(chUserInput chan string) string {
+func GetServiceNameFromChannel(chUserInput chan string) string {
 	fmt.Printf("Please Enter Service Name: ")
 	var serviceName string
 
@@ -234,13 +240,13 @@ func GetServiceNameFromUserNew(chUserInput chan string) string {
 		serviceName = <-chUserInput
 		// 首先在缓存中查询
 		tmpServiceList := make([]string, 0)
-		for name, _ := range global.GlobalVar.ServiceNameID {
+		for name := range global.GlobalVar.ServiceNameID {
 			if true == strings.Contains(name, serviceName) {
 				tmpServiceList = append(tmpServiceList, name)
 			}
 		}
 		if len(tmpServiceList) != 0 {
-			return ChooseServiceNew(tmpServiceList, chUserInput)
+			return ChooseServiceFromChannel(tmpServiceList, chUserInput)
 		}
 
 		serviceList, err := GetCompleteServiceName(serviceName)
@@ -248,13 +254,13 @@ func GetServiceNameFromUserNew(chUserInput chan string) string {
 			fmt.Printf("Please Enter Right Service Name: ")
 			goto loop
 		}
-		return ChooseServiceNew(serviceList, chUserInput)
+		return ChooseServiceFromChannel(serviceList, chUserInput)
 
 	}
 	return ""
 }
 
-func ChooseServiceNew(serviceList []string, chUserInput chan string) string {
+func ChooseServiceFromChannel(serviceList []string, chUserInput chan string) string {
 	if len(serviceList) == 1 {
 		return serviceList[0]
 	}
@@ -412,7 +418,7 @@ func QuitLog(serviceID string) {
 	os.Remove(global.LogFile.TmpLogFile)
 }
 
-func GetAllService() {
+func InitServices() {
 	cmdString := "rancher ps"
 	output, err := execShellCmd(cmdString)
 	if err != nil {

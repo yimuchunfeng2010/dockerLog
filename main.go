@@ -5,7 +5,7 @@ import (
 )
 
 func init(){
-	service.GetAllService()
+	service.InitServices()
 }
 func main() {
 	service.LogMain()
