@@ -108,7 +108,7 @@ func GetServiceIDFromCache(serviceName string) (serviceID string, err error) {
 			return id, nil
 		}
 	}
-	return "", errors.New("Service Not Found")
+	return "", errors.New(fmt.Sprintf("Service Not Found"))
 }
 
 func GetLogsByID(serviceID string) (err error) {
@@ -424,11 +424,11 @@ func GetAllService() {
 
 		for _, curServiceName := range config.Config.Sevices {
 			if strings.Contains(value, curServiceName) {
-				tmpValueArrray := strings.Split(value, " ")
-				for _, part := range tmpValueArrray {
+				tmpValueArray := strings.Split(value, " ")
+				for _, part := range tmpValueArray {
 					if strings.Contains(part, curServiceName) {
 						tmpName := strings.Split(part, "/")
-						global.GlobalVar.ServiceNameID[tmpName[0]] = tmpValueArrray[0]
+						global.GlobalVar.ServiceNameID[tmpName[0]] = tmpValueArray[0]
 					}
 				}
 			}
