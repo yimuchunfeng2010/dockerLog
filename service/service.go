@@ -5,14 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"DockerLog/config"
+	"dockerLog/config"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 	"encoding/json"
-	"DockerLog/global"
+	"dockerLog/global"
 )
 
 func LogMain() {
