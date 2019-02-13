@@ -10,3 +10,4 @@ logs/*
 nohup.out
 main
 main.exe
+*.exe

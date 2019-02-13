@@ -39,3 +39,9 @@ config.go文件中可以对打印信息进行配置
 1、预加载的服务名
 2、日志字段
 3、日志颜色配置
+
+### 效果演示
+#### rancher原始效果
+![rancher原始效果](file/rancher.png)
+#### 本工具效果
+![rancher原始效果](file/mine.png)
