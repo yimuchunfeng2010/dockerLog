@@ -1,5 +1,5 @@
 name: docker-log
-version: 1.0.3
-description: docker日志格式化
+version: 1.0.4
+description: docker日志分析工具
 program_language: golang
 

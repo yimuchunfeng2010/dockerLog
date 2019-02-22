@@ -4,7 +4,7 @@ import (
 	"dockerLog/service"
 )
 
-func init(){
+func init() {
 	service.InitServices()
 }
 func main() {

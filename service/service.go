@@ -2,17 +2,17 @@ package service
 
 import (
 	"bufio"
+	"dockerLog/config"
+	"dockerLog/global"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"dockerLog/config"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
-	"dockerLog/global"
 )
 
 func LogMain() {
@@ -33,7 +33,7 @@ func LogMain() {
 
 	for {
 		select {
-			// 打印日志
+		// 打印日志
 		case logMsg, _ := <-chLog:
 			PrintLog(logMsg)
 			// 处理用户命令输入
@@ -374,7 +374,7 @@ func PrintLog(logMsg map[string]string) {
 			format = config.Config.PrintFormat.ErrWarning
 		}
 		msg := fmt.Sprintf("   %s: %s", strings.ToUpper(field), logMsg[field])
-		fmt.Printf(" %c[%d;%d;%dm%s%s%c[0m\n", 0x1B, config.Config.PrintColor.BackgroudColor, config.Config.PrintColor.FrontColor, format, "", msg, 0x1B)
+		fmt.Printf(" %c[%d;%d;%dm%s%s%c[0m\n", 0x1B, config.Config.PrintColor.BackgroundColor, config.Config.PrintColor.FrontColor, format, "", msg, 0x1B)
 	}
 	fmt.Printf("}\n")
 
@@ -428,7 +428,7 @@ func InitServices() {
 	global.GlobalVar.ServiceNameID = make(map[string]string)
 	for _, value := range output {
 
-		for _, curServiceName := range config.Config.Sevices {
+		for _, curServiceName := range config.Config.Services {
 			if strings.Contains(value, curServiceName) {
 				tmpValueArray := strings.Split(value, " ")
 				for _, part := range tmpValueArray {

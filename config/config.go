@@ -1,11 +1,10 @@
 package config
 
 var Config = struct {
-	Fields       []string
-	Sevices      []string
-	PrintColor PrintColor
+	Fields      []string
+	Services    []string
+	PrintColor  PrintColor
 	PrintFormat PrintFormat
-
 }{
 	// 日志打印字段
 	Fields: []string{
@@ -15,7 +14,7 @@ var Config = struct {
 	},
 
 	// 预加载的服务名
-	Sevices:[]string{
+	Services: []string{
 		"service-etrip-approval",
 		"service-etrip-bill",
 		"service-finance-bill",
@@ -32,15 +31,15 @@ var Config = struct {
 	},
 
 	// 打印颜色配置
-	PrintColor:PrintColor{
-		FrontColor:40,
-		BackgroudColor:1,
+	PrintColor: PrintColor{
+		FrontColor:      40,
+		BackgroundColor: 1,
 	},
-	PrintFormat:PrintFormat{
-		TimeFormat:32,
-		FileFormat:35,
-		MsgFormat:33,
-		ErrWarning:31,
+	PrintFormat: PrintFormat{
+		TimeFormat: 32,
+		FileFormat: 35,
+		MsgFormat:  33,
+		ErrWarning: 31,
 	},
 }
 
@@ -66,14 +65,14 @@ var Config = struct {
     //  8  不可见
 */
 
-type PrintColor struct{
-	FrontColor int
-	BackgroudColor int
+type PrintColor struct {
+	FrontColor      int
+	BackgroundColor int
 }
 
 type PrintFormat struct {
 	TimeFormat int
 	FileFormat int
-	MsgFormat int
+	MsgFormat  int
 	ErrWarning int
 }
