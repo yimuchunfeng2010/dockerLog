@@ -9,12 +9,37 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// 初始化，缓存所有服务名与ID映射关键
+func InitServices() {
+	cmdString := "rancher ps"
+	output, err := execShellCmd(cmdString)
+	if err != nil {
+		fmt.Printf("Exec Shell Cmd Failed! [Err: %s]", err.Error())
+		return
+	}
+
+	global.GlobalVar.ServiceNameID = make(map[string]string)
+	for _, value := range output {
+		for _, service := range config.Config.Services {
+			if strings.Contains(value, service) {
+				tmpValueArray := strings.Split(value, " ")
+				for _, part := range tmpValueArray {
+					if strings.Contains(part, service) {
+						tmpName := strings.Split(part, "/")
+						global.GlobalVar.ServiceNameID[tmpName[0]] = tmpValueArray[0]
+					}
+				}
+			}
+		}
+	}
+}
+
+// 日志处理主函数
 func LogMain() {
 	serviceName := GetServiceNameFromUser()
 	serviceID, err := GetServiceID(serviceName)
@@ -25,11 +50,14 @@ func LogMain() {
 
 	chLog := make(chan map[string]string)
 	chUserInput := make(chan string)
-	chInternal := make(chan string)
+	chCmd := make(chan string)
 
+	// 查询日志协程
 	go GetLogsByID(serviceID)
+	// 日志处理协程
+	go ResolveLog(chLog, chCmd)
+	// 获取用户输入协程
 	go GetUseInput(chUserInput)
-	go ProcLog(chLog, chInternal)
 
 	for {
 		select {
@@ -39,13 +67,12 @@ func LogMain() {
 			// 处理用户命令输入
 		case cmd := <-chUserInput:
 			switch cmd {
-			case global.Command.Quit:
-				QuitLog(serviceID)
-				return
+			case global.Command.Switch: // 切换服务
 
-			case global.Command.Switch: // 切换分支
-				chInternal <- global.InternalCmd.Stop
+				// 停止当前日志
+				chCmd <- global.InternalCmd.Stop
 				StopSysProcess(serviceID)
+
 				serviceName := GetServiceNameFromChannel(chUserInput)
 				serviceID, err = GetServiceID(serviceName)
 				if err != nil {
@@ -54,14 +81,17 @@ func LogMain() {
 				}
 
 				go GetLogsByID(serviceID)
-				go ProcLog(chLog, chInternal)
+				go ResolveLog(chLog, chCmd)
 
+			case global.Command.Quit:
+				QuitLog(serviceID)
+				return
 			case global.Command.CleanScreen:
 				CleanScreen()
 			case global.Command.PausePrint:
-				chInternal <- global.InternalCmd.Pause
+				chCmd <- global.InternalCmd.Pause
 			case global.Command.RestartPrint:
-				chInternal <- global.InternalCmd.Restart
+				chCmd <- global.InternalCmd.Restart
 			default:
 				CmdHelp()
 
@@ -114,7 +144,7 @@ func GetServiceIDFromCache(serviceName string) (serviceID string, err error) {
 			return id, nil
 		}
 	}
-	return "", errors.New(fmt.Sprintf("Service Not Found"))
+	return "", errors.New(fmt.Sprintf("Service Not Found[ServiceName:%s]", serviceName))
 }
 
 func GetLogsByID(serviceID string) (err error) {
@@ -124,14 +154,15 @@ func GetLogsByID(serviceID string) (err error) {
 		if 0 == strings.Compare(global.ErrVar.SysErr, err.Error()) {
 			return
 		}
-		fmt.Printf("Exec ShellCmd Failed![Err:%s]\n", err.Error())
+		fmt.Printf("Shell Cmd Failed![Err:%s]\n", err.Error())
 		return
 	}
 	return
 }
 
-func ProcLog(chLog chan map[string]string, chInternal chan string) {
+func ResolveLog(chLog chan map[string]string, chCmd chan string) {
 	for {
+		// 等待日志文件创建
 		if true == IsExist(global.LogFile.TmpLogFile) {
 			break
 		}
@@ -149,7 +180,7 @@ func ProcLog(chLog chan map[string]string, chInternal chan string) {
 	for {
 	CmdLoop:
 		select {
-		case stop := <-chInternal:
+		case stop := <-chCmd:
 			switch stop {
 			case global.InternalCmd.Stop:
 				return
@@ -179,27 +210,6 @@ func ProcLog(chLog chan map[string]string, chInternal chan string) {
 		chLog <- m
 
 	}
-}
-func execShellCmd(arg string) (output []string, err error) {
-	cmd := exec.Command("/bin/bash", "-c", arg)
-	out, err := cmd.Output()
-	if err != nil {
-		return
-	}
-	tmp := strings.Split(string(out), "\n")
-
-	if len(tmp) < 2 {
-		output = tmp
-	} else {
-		output = tmp[:len(tmp)-1]
-	}
-	return
-}
-
-// 判断文件是否存在
-func IsExist(f string) bool {
-	_, err := os.Stat(f)
-	return err == nil || os.IsExist(err)
 }
 
 func GetServiceNameFromUser() string {
@@ -265,7 +275,7 @@ func ChooseServiceFromChannel(serviceList []string, chUserInput chan string) str
 		return serviceList[0]
 	}
 	if len(serviceList) > 1 {
-		fmt.Println("Which Service Do You Choose:")
+		fmt.Println("Which Service Do You Want: ")
 	idxLoop:
 		for idx, value := range serviceList {
 			fmt.Println(idx, value)
@@ -290,9 +300,9 @@ func ChooseService(serviceList []string) string {
 
 	idxLoop:
 		for idx, value := range serviceList {
-			fmt.Println(idx, "  ", value)
+			fmt.Println(idx, ":  ", value)
 		}
-		fmt.Printf("Which Service Do You Choose: ")
+		fmt.Printf("Which Service Do You Want: ")
 		var serviceIdx int
 		fmt.Scanf("%d", &serviceIdx)
 		if serviceIdx >= len(serviceList) {
@@ -332,14 +342,6 @@ func GetCompleteServiceName(partServiceName string) (serviceList []string, err e
 	return
 }
 
-func GetUseInput(chUserInput chan string) {
-	for {
-		var cmd string
-		fmt.Scanf("%s", &cmd)
-		chUserInput <- cmd
-	}
-}
-
 func PrintLog(logMsg map[string]string) {
 	// 先判断是否有需要打印的日志
 	isNeedPrint := false
@@ -370,6 +372,7 @@ func PrintLog(logMsg map[string]string) {
 			format = config.Config.PrintFormat.FileFormat
 		}
 
+		// 若出现错误或者警告级别的日志，则红色警示
 		if logMsg["level"] == "error" || logMsg["level"] == "warning" {
 			format = config.Config.PrintFormat.ErrWarning
 		}
@@ -378,83 +381,4 @@ func PrintLog(logMsg map[string]string) {
 	}
 	fmt.Printf("}\n")
 
-}
-
-func StopSysProcess(ServiceID string) (err error) {
-
-	cmdString := fmt.Sprintf("ps -ef|grep %s", ServiceID)
-	output, err := execShellCmd(cmdString)
-	if err != nil {
-		return
-	}
-
-	var processID int
-	for _, value := range output {
-		if true == strings.Contains(value, "rancher logs -f") && -1 == strings.Index(value, "2>&1") {
-			tmpArray := strings.Split(value, " ")
-			for _, vv := range tmpArray {
-				if id, newErr := strconv.Atoi(vv); newErr == nil {
-					processID = id
-					goto loop
-				}
-			}
-		}
-	}
-
-loop:
-	if 0 == processID {
-		return
-	}
-	// 终止进程
-	cmdString = fmt.Sprintf("kill %d", processID)
-	execShellCmd(cmdString)
-	return
-}
-
-func QuitLog(serviceID string) {
-	// 终止读取日志进程
-	StopSysProcess(serviceID)
-	// 删除临时文件
-	os.Remove(global.LogFile.TmpLogFile)
-}
-
-func InitServices() {
-	cmdString := "rancher ps"
-	output, err := execShellCmd(cmdString)
-	if err != nil {
-		fmt.Printf("Exec Shell Cmd Failed! [Err: %s]", err.Error())
-		return
-	}
-	global.GlobalVar.ServiceNameID = make(map[string]string)
-	for _, value := range output {
-
-		for _, curServiceName := range config.Config.Services {
-			if strings.Contains(value, curServiceName) {
-				tmpValueArray := strings.Split(value, " ")
-				for _, part := range tmpValueArray {
-					if strings.Contains(part, curServiceName) {
-						tmpName := strings.Split(part, "/")
-						global.GlobalVar.ServiceNameID[tmpName[0]] = tmpValueArray[0]
-					}
-				}
-			}
-		}
-	}
-}
-
-func CleanScreen() {
-	msg := ""
-	for i := 0; i < 100; i++ {
-		msg += "\n"
-	}
-	fmt.Printf(msg)
-}
-
-func CmdHelp() {
-	fmt.Println("Please Enter Right Command")
-	fmt.Println("q   Quit the program")
-	fmt.Println("s   Switch to other service")
-	fmt.Println("c   clean screen")
-	fmt.Println("p   Pause to pring log")
-	fmt.Println("r   Restart to print log")
 }

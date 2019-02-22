@@ -11,3 +11,4 @@ nohup.out
 main
 main.exe
 *.exe
+dockerLog.exe
